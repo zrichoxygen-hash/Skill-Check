@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Créer un quiz</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <div class="container">
+      <div class="header card">
+        <div class="brand">
+          <div class="logo">QZ</div>
+          <div>
+            <h1>Créer un quiz</h1>
+            <div style="color:var(--muted)">Importe un Excel et partage le QR</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <form action="/create" method="post" enctype="multipart/form-data">
+          <p style="margin:0 0 12px;color:var(--muted)">Sélectionne ton fichier Excel, puis clique sur <strong>Téléverser et créer la partie</strong>.</p>
+          <label>Fichier Excel (colonnes: question, opt1, opt2, opt3, opt4, correct):</label>
+          <input type="file" name="file" accept=".xlsx,.xls" required />
+          <label>Temps par question (secondes):</label>
+          <input type="number" name="time" value="20" min="5" max="300" />
+          <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+            <button type="submit">Téléverser et créer la partie</button>
+            <button id="downloadTemplate" type="button" class="secondary" style="display:inline-block;padding:10px 14px;border-radius:10px">Télécharger le modèle Excel</button>
+            <button type="button" class="secondary" onclick="location.reload()">Réinitialiser</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <script>
+      document.getElementById('downloadTemplate').addEventListener('click', async () => {
+        try {
+          const res = await fetch('/template');
+          if (!res.ok) throw new Error('Téléchargement failed');
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'quiz_template.xlsx';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+          // after download started, refresh the page
+          setTimeout(() => location.reload(), 300);
+        } catch (e) {
+          alert('Erreur lors du téléchargement du modèle');
+        }
+      });
+    </script>
+  </body>
+</html>

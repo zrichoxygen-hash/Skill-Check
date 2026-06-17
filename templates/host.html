@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Host - Quiz</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <div class="container">
+      <div class="header card">
+        <div class="brand">
+          <div class="logo">QZ</div>
+          <div>
+            <h1>Hôte — Partie {{ game_id }}</h1>
+            <div style="color:var(--muted)">Lien: <a href="{{ join_url }}">{{ join_url }}</a></div>
+            <div style="margin-top:8px;color:var(--muted)">Questions: {{ questions|length }}</div>
+          </div>
+        </div>
+        <div>
+          <button id="startBtn">Lancer la partie</button>
+        </div>
+      </div>
+
+      <div class="card two-col">
+        <div class="col">
+          <h3>QR de participation</h3>
+          <img class="qr" src="{{ qr }}" alt="QR code" />
+          <div style="margin-top:12px;color:var(--muted)">Temps par question: {{ time }}s</div>
+          <div style="margin-top:12px;color:var(--muted)">Joueurs connectés: <span id="playerCount">0</span></div>
+          <div class="progress-container">
+            <div id="progressText" style="margin-top:12px;color:var(--muted)">Progression: 0 / {{ questions|length }}</div>
+            <div class="progress-track"><div id="progressFill" class="progress-fill"></div></div>
+          </div>
+        </div>
+        <div class="col">
+          <h3>Joueurs connectés</h3>
+          <ul id="players" class="list"></ul>
+          <h3 style="margin-top:16px">Scores actuels</h3>
+          <ul id="scores" class="list"></ul>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+      const GAME_ID = "{{ game_id }}";
+    </script>
+    <script src="/static/host.js"></script>
+  </body>
+</html>
