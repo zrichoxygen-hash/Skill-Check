@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>SkillCheck – Professeur</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="header">
+        <span class="logo">📝 SkillCheck</span>
+        <a href="/" style="color:#aaa; text-decoration:none; font-size:0.9rem;">← Accueil</a>
+        <button id="toggle-theme" class="btn btn-primary" style="margin-left:20px;">🌗 Mode clair/sombre</button>
+</div>
+
+<div class="container">
+
+    <!-- ══ VIEW : Upload ══════════════════════════════════════════════════════ -->
+    <div id="view-upload">
+        <div class="card">
+            <a href="/static/modele_quiz.xlsx" download class="btn btn-success" style="float:right; margin-bottom:10px;">⬇ Télécharger le modèle Excel</a>
+            <h2>📁 Importer un test</h2>
+            <p class="text-muted mt-8" style="margin-bottom:16px; line-height:1.6;">
+                Formats acceptés : <strong>CSV</strong> ou <strong>Excel (.xlsx, .xls)</strong><br>
+                Colonnes requises :
+                <code style="font-size:0.85rem; background:#0f3460; padding:2px 6px; border-radius:4px;">
+                    question, reponse_1 … reponse_4, bonne_reponse (1-4), cours, sujet
+                </code>
+            </p>
+            <label>Choisir le fichier</label>
+            <input type="file" id="testFile" accept=".csv,.xlsx,.xls">
+            <button class="btn btn-primary btn-lg" id="upload-btn" onclick="uploadTest(event)">
+                ⬆ Importer et créer la session
+            </button>
+            <div id="upload-error" style="color:#e94560; margin-top:10px; font-size:0.9rem;"></div>
+        </div>
+
+        <div class="card">
+            <h2 style="font-size:1rem; color:#aaa;">Exemple de format</h2>
+            <div style="overflow-x:auto; margin-top:10px;">
+                <table class="format-table">
+                    <thead>
+                        <tr>
+                            <th>question</th>
+                            <th>reponse_1</th>
+                            <th>reponse_2</th>
+                            <th>reponse_3</th>
+                            <th>reponse_4</th>
+                            <th>bonne_reponse</th>
+                            <th>cours</th>
+                            <th>sujet</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Capitale de la France ?</td>
+                            <td>Paris</td><td>Lyon</td><td>Marseille</td><td>Bordeaux</td>
+                            <td style="color:#26de81; font-weight:700;">1</td>
+                            <td>Géographie</td><td>Capitales</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ VIEW : Lobby ═══════════════════════════════════════════════════════ -->
+    <div id="view-lobby" class="hidden">
+        <div class="card text-center">
+            <h2>Code de session</h2>
+            <div class="session-code" id="session-code-display">------</div>
+            <p class="text-muted mt-8">
+                Les étudiants peuvent scanner ce QR code ou saisir le code sur
+                <strong style="color:#f9ca24;"><span id="server-url"></span>/student</strong>
+            </p>
+            <div id="qrcode" style="margin:18px auto;"></div>
+        </div>
+
+        <div class="card">
+            <h2>⏱ Durée par question</h2>
+            <div class="radio-group" id="chrono-group">
+                <div class="radio-option selected" id="opt-30" onclick="selectChrono(30)">30 s</div>
+                <div class="radio-option" id="opt-45" onclick="selectChrono(45)">45 s</div>
+                <div class="radio-option" id="opt-60" onclick="selectChrono(60)">1 min</div>
+                <div class="radio-option" id="opt-custom" style="min-width:120px;">
+                    <input type="number" id="custom-min" min="0" max="59" placeholder="min" style="width:40px;"> :
+                    <input type="number" id="custom-sec" min="0" max="59" placeholder="sec" style="width:40px;">
+                    <button class="btn btn-primary" style="padding:4px 10px; font-size:0.9rem; margin-left:4px;" onclick="setCustomChrono()">OK</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                <h2 style="margin-bottom:0;">🎓 Étudiants connectés</h2>
+                <span class="students-badge">
+                    <span id="students-count">0</span> connecté(s)
+                </span>
+            </div>
+            <ul id="students-list" style="list-style:none; display:flex; flex-wrap:wrap; gap:8px;">
+                <li class="text-muted" style="font-style:italic;">En attente des étudiants...</li>
+            </ul>
+        </div>
+
+        <button class="btn btn-success btn-lg" id="start-btn" onclick="nextQuestion()">
+            ▶ Lancer la question 1
+        </button>
+    </div>
+
+    <!-- ══ VIEW : Question active ═════════════════════════════════════════════ -->
+    <div id="view-question" class="hidden">
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:12px 20px;">
+            <span id="q-progress" class="text-muted" style="font-size:0.95rem;"></span>
+            <span class="answers-badge" id="answered-count-badge">0 / 0 réponses</span>
+        </div>
+
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                <div class="question-meta">
+                    <span class="badge" id="q-cours"></span>
+                    <span class="badge" id="q-sujet"></span>
+                </div>
+                <div class="chrono" id="prof-chrono">--</div>
+            </div>
+            <div class="chrono-bar">
+                <div class="chrono-bar-fill" id="prof-chrono-bar" style="width:100%"></div>
+            </div>
+            <div class="question-text" id="prof-question-text">...</div>
+            <div class="answers-grid" id="prof-answers-grid">
+                <!-- filled by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ VIEW : Résultats ═══════════════════════════════════════════════════ -->
+    <div id="view-results" class="hidden">
+        <div class="card">
+            <h2>📊 Résultats de la question</h2>
+            <div class="question-text" id="results-question-text" style="font-size:1.15rem; margin-bottom:20px;"></div>
+            <div id="results-bars"></div>
+        </div>
+
+        <div class="card">
+            <h2>🏆 Classement en cours</h2>
+            <ul class="ranking-list" id="prof-ranking"></ul>
+        </div>
+
+        <button class="btn btn-success btn-lg" id="next-question-btn" onclick="nextQuestion()">
+            Question suivante ▶
+        </button>
+        <button class="btn btn-primary btn-lg hidden" id="finish-btn" onclick="nextQuestion()">
+            🏁 Voir le classement final
+        </button>
+    </div>
+
+    <!-- ══ VIEW : Quiz terminé ════════════════════════════════════════════════ -->
+    <div id="view-finished" class="hidden">
+        <div class="card text-center" style="padding:40px;">
+            <div style="font-size:3.5rem;">🏁</div>
+            <h1 style="margin-top:12px; margin-bottom:6px;">Quiz Terminé !</h1>
+            <p class="text-muted">Classement final</p>
+        </div>
+        <div class="card">
+            <ul class="ranking-list" id="final-ranking"></ul>
+        </div>
+        <button class="btn btn-primary btn-lg" onclick="location.reload()">🔄 Nouveau quiz</button>
+    </div>
+
+</div><!-- /container -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+const socket = io();
+let sessionCode  = null;
+let selectedChrono = 20;
+let totalStudents  = 0;
+let totalQuestions = 0;
+
+// ── Utilities ──────────────────────────────────────────────────────────────
+function showView(name) {
+    ['upload','lobby','question','results','finished'].forEach(v => {
+        document.getElementById('view-' + v).classList.add('hidden');
+    });
+    document.getElementById('view-' + name).classList.remove('hidden');
+}
+
+function escHtml(str) {
+    return String(str)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function renderRanking(elId, ranking) {
+    const ul     = document.getElementById(elId);
+    const medals = ['🥇','🥈','🥉'];
+    ul.innerHTML = ranking.map(([name, score], i) => `
+        <li class="ranking-item">
+            <span class="rank-pos ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${medals[i] ?? (i+1)}</span>
+            <span class="rank-name">${escHtml(name)}</span>
+            <span class="rank-score">${score} pt${score !== 1 ? 's' : ''}</span>
+        </li>`).join('');
+}
+
+// ── Upload ──────────────────────────────────────────────────────────────────
+async function uploadTest(e) {
+    const btn      = e.currentTarget;
+    const fileInput = document.getElementById('testFile');
+    const errDiv   = document.getElementById('upload-error');
+    errDiv.textContent = '';
+    if (!fileInput.files.length) {
+        errDiv.textContent = 'Veuillez sélectionner un fichier.';
+        return;
+    }
+    btn.disabled = true;
+    btn.textContent = '⏳ Chargement...';
+    const fd = new FormData();
+    fd.append('file', fileInput.files[0]);
+    try {
+        const res  = await fetch('/api/upload', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok) {
+            errDiv.textContent = data.error || 'Erreur inconnue.';
+            btn.disabled = false;
+            btn.textContent = '⬆ Importer et créer la session';
+            return;
+        }
+        sessionCode    = data.session_code;
+        totalQuestions = data.nb_questions;
+        document.getElementById('session-code-display').textContent = sessionCode;
+        document.getElementById('server-url').textContent = location.host;
+        document.getElementById('start-btn').textContent =
+            `▶ Lancer la question 1 / ${totalQuestions}`;
+        showView('lobby');
+        socket.emit('join_prof', { code: sessionCode });
+    } catch {
+        errDiv.textContent = 'Erreur de connexion au serveur.';
+        btn.disabled = false;
+        btn.textContent = '⬆ Importer et créer la session';
+    }
+}
+
+// ── Chrono selector ─────────────────────────────────────────────────────────
+function selectChrono(val) {
+    selectedChrono = val;
+    [30, 45, 60].forEach(v => {
+        const el = document.getElementById('opt-' + v);
+        if (el) el.classList.toggle('selected', v === val);
+    });
+    const custom = document.getElementById('opt-custom');
+    if (custom) custom.classList.remove('selected');
+    if (sessionCode) socket.emit('set_chrono', { code: sessionCode, chrono: val });
+}
+
+// ── Start / next question ────────────────────────────────────────────────────
+function nextQuestion() {
+    if (!sessionCode) return;
+    socket.emit('next_question', { code: sessionCode, chrono: selectedChrono });
+}
+
+// ── Socket handlers ──────────────────────────────────────────────────────────
+socket.on('session_info', (data) => {
+    totalStudents = data.students.length;
+    updateStudentsList(data.students);
+});
+
+socket.on('students_update', (data) => {
+    totalStudents = data.count;
+    updateStudentsList(data.students);
+    document.getElementById('students-count').textContent = data.count;
+});
+
+function updateStudentsList(students) {
+    const ul = document.getElementById('students-list');
+    document.getElementById('students-count').textContent = students.length;
+    if (!students.length) {
+        ul.innerHTML = '<li class="text-muted" style="font-style:italic;">En attente des étudiants...</li>';
+        return;
+    }
+    ul.innerHTML = students.map(n =>
+        `<li style="background:#0f3460; padding:7px 14px; border-radius:20px; font-size:0.9rem;">${escHtml(n)}</li>`
+    ).join('');
+}
+
+socket.on('new_question', (data) => {
+    showView('question');
+    totalStudents = totalStudents || 0;
+    document.getElementById('q-progress').textContent =
+        `Question ${data.index + 1} / ${data.total}`;
+    document.getElementById('prof-question-text').textContent = data.question;
+    document.getElementById('q-cours').textContent  = data.cours  || '—';
+    document.getElementById('q-sujet').textContent  = data.sujet  || '—';
+    document.getElementById('answered-count-badge').textContent =
+        `0 / ${totalStudents} réponses`;
+
+    const colors  = ['a1','a2','a3','a4'];
+    const symbols = ['▲','◆','●','★'];
+    const grid    = document.getElementById('prof-answers-grid');
+    grid.innerHTML = data.reponses.map((r, i) => `
+        <div class="answer-btn ${colors[i]}" style="cursor:default;">
+            <span style="font-size:1.3rem; margin-right:8px;">${symbols[i]}</span>${escHtml(r)}
+        </div>`
+    ).join('');
+    // Reset chrono bar
+    document.getElementById('prof-chrono-bar').style.width = '100%';
+    document.getElementById('prof-chrono-bar').classList.remove('urgent');
+    document.getElementById('prof-chrono').classList.remove('urgent');
+});
+
+socket.on('chrono_tick', (data) => {
+    const el  = document.getElementById('prof-chrono');
+    const bar = document.getElementById('prof-chrono-bar');
+    el.textContent  = data.remaining;
+    const pct = Math.max(0, (data.remaining / data.total) * 100);
+    bar.style.width = pct + '%';
+    const urgent = data.remaining <= 5;
+    el.classList.toggle('urgent', urgent);
+    bar.classList.toggle('urgent', urgent);
+});
+
+socket.on('answer_count', (data) => {
+    totalStudents = data.total;
+    document.getElementById('answered-count-badge').textContent =
+        `${data.count} / ${data.total} réponses`;
+});
+
+socket.on('show_results', (data) => {
+    showView('results');
+    document.getElementById('results-question-text').textContent = data.question;
+
+    // Build bars
+    const total   = data.total_students || 1;
+    const colors  = ['a1','a2','a3','a4'];
+    const symbols = ['▲','◆','●','★'];
+    const barsDiv = document.getElementById('results-bars');
+    barsDiv.innerHTML = data.reponses.map((resp, i) => {
+        const count  = data.stats[i];
+        const pct    = Math.round((count / total) * 100);
+        const ok     = i === data.correct;
+        return `
+        <div class="answer-stat-bar">
+            <span class="answer-stat-label">${symbols[i]}</span>
+            <div class="bar-track">
+                <div class="bar-fill ${colors[i]} ${ok ? 'correct-bar' : ''}"
+                     style="width:${Math.max(pct, 3)}%">
+                    ${count > 0 ? count : ''}
+                </div>
+            </div>
+            <span class="bar-answer-label" style="${ok ? 'color:#26de81;font-weight:700;' : 'color:#aaa;'}">
+                ${escHtml(resp)} ${ok ? '✓' : ''}
+            </span>
+        </div>`;
+    }).join('');
+
+    renderRanking('prof-ranking', data.ranking);
+
+    const hasNext = data.has_next;
+    document.getElementById('next-question-btn').classList.toggle('hidden', !hasNext);
+    document.getElementById('finish-btn').classList.toggle('hidden',  hasNext);
+});
+
+socket.on('quiz_finished', (data) => {
+    showView('finished');
+    renderRanking('final-ranking', data.ranking);
+});
+
+socket.on('error', (data) => {
+    alert('Erreur : ' + data.message);
+});
+</script>
+</body>
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<script>
+document.getElementById('toggle-theme').onclick = function() {
+    document.body.classList.toggle('light-mode');
+    localStorage.setItem('theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
+};
+if(localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
+
+// QR code affiché quand le code de session est affiché
+const codeDisplay = document.getElementById('session-code-display');
+const qrcodeDiv = document.getElementById('qrcode');
+const serverUrl = window.location.origin + '/student';
+let lastCode = '';
+setInterval(() => {
+    const code = codeDisplay.textContent.trim();
+    if (code && code !== '------' && code !== lastCode) {
+        lastCode = code;
+        qrcodeDiv.innerHTML = '';
+        const qr = new QRious({
+            element: document.createElement('canvas'),
+            value: serverUrl + '?code=' + code,
+            size: 180
+        });
+        qrcodeDiv.appendChild(qr.element);
+    }
+}, 500);
+</script>
+</body>
+</html>

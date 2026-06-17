@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillCheck</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="header">
+    <span class="logo">📝 SkillCheck</span>
+    <button id="toggle-theme" class="btn btn-primary" style="margin-left:20px;">🌗 Mode clair/sombre</button>
+</div>
+<div class="container" style="text-align:center; padding-top: 60px;">
+    <h1>📝 SkillCheck</h1>
+    <p class="text-muted" style="font-size:1.2rem; margin-bottom:20px;">
+        Quiz interactif en temps réel
+    </p>
+    <div class="landing-btns">
+        <a href="/prof" class="btn-role prof">
+            <span class="icon">👨‍🏫</span>
+            Professeur
+        </a>
+        <a href="/student" class="btn-role student">
+            <span class="icon">🎓</span>
+            Étudiant
+        </a>
+    </div>
+</div>
+</body>
+<script>
+document.getElementById('toggle-theme').onclick = function() {
+    document.body.classList.toggle('light-mode');
+    localStorage.setItem('theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
+};
+if(localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
+</script>
+</body>
+</html>

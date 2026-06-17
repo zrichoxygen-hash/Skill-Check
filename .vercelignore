@@ -1,0 +1,3 @@
+# Ignore local venv and pycache
+.venv/
+__pycache__/

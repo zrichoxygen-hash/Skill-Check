@@ -1,0 +1,6 @@
+# Vercel Python deployment
+python3.9
+flask
+flask-cors
+flask-socketio
+pandas

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillCheck – Étudiant</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="header">
+    <span class="logo">📝 SkillCheck</span>
+    <a href="/" style="color:#aaa; text-decoration:none; font-size:0.9rem;">← Accueil</a>
+    <button id="toggle-theme" class="btn btn-primary" style="margin-left:20px;">🌗 Mode clair/sombre</button>
+</div>
+
+<div class="container">
+
+    <!-- ══ VIEW : Rejoindre ═══════════════════════════════════════════════════ -->
+    <div id="view-join">
+        <div class="card">
+            <h2>🎓 Rejoindre une session</h2>
+            <div class="mt-16">
+                <label>Code de session</label>
+                <input type="text" id="code-input" maxlength="6" placeholder="Ex : A3F9B2"
+                       style="text-transform:uppercase; letter-spacing:5px; font-size:1.3rem; text-align:center;"
+                       oninput="this.value=this.value.toUpperCase()"
+                       onkeydown="if(event.key==='Enter') document.getElementById('name-input').focus()">
+            </div>
+            <div>
+                <label>Votre prénom / pseudo</label>
+                <input type="text" id="name-input" maxlength="30" placeholder="Ex : Alice"
+                       onkeydown="if(event.key==='Enter') joinSession()">
+            </div>
+            <button class="btn btn-success btn-lg" onclick="joinSession()">
+                🚀 Rejoindre
+            </button>
+            <div id="join-error" style="color:#e94560; margin-top:10px; font-size:0.9rem;"></div>
+        </div>
+    </div>
+
+    <!-- ══ VIEW : Attente ═════════════════════════════════════════════════════ -->
+    <div id="view-wait" class="hidden">
+        <div class="card text-center" style="padding:60px 20px;">
+            <div style="font-size:3rem; margin-bottom:16px;">⏳</div>
+            <h2 id="wait-greeting">Bonjour !</h2>
+            <p class="status waiting mt-16">En attente de la prochaine question...</p>
+            <p class="text-muted mt-16" style="font-size:0.9rem;">
+                Session : <strong style="color:#f9ca24;" id="wait-code"></strong>
+            </p>
+        </div>
+    </div>
+
+    <!-- ══ VIEW : Question active ═════════════════════════════════════════════ -->
+    <div id="view-question" class="hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center;
+                    background:#16213e; border-radius:10px; padding:10px 18px; margin-bottom:12px;">
+            <span id="s-q-progress" class="text-muted" style="font-size:0.9rem;"></span>
+            <div class="chrono" id="student-chrono">--</div>
+        </div>
+        <div class="chrono-bar">
+            <div class="chrono-bar-fill" id="student-chrono-bar" style="width:100%"></div>
+        </div>
+
+        <div class="card">
+            <div class="question-meta">
+                <span class="badge" id="s-cours"></span>
+                <span class="badge" id="s-sujet"></span>
+            </div>
+            <div class="question-text" id="student-question-text">...</div>
+        </div>
+
+        <div class="answers-grid" id="student-answers-grid">
+            <!-- filled by JS -->
+        </div>
+    </div>
+
+    <!-- ══ VIEW : Réponse envoyée (attente résultats) ═════════════════════════ -->
+    <div id="view-answered" class="hidden">
+        <div class="card answered-overlay">
+            <div class="big-icon" id="answered-icon">✅</div>
+            <div class="msg" id="answered-msg">Réponse envoyée !</div>
+            <p class="status waiting" style="margin-top:24px;">En attente des résultats...</p>
+        </div>
+    </div>
+
+    <!-- ══ VIEW : Résultats ═══════════════════════════════════════════════════ -->
+    <div id="view-results" class="hidden">
+        <div class="card text-center" id="result-card" style="padding:28px;">
+            <div id="result-icon" style="font-size:3.5rem;"></div>
+            <div id="result-msg"   style="font-size:1.4rem; font-weight:700; margin-top:10px;"></div>
+            <div id="result-score" style="color:#26de81; font-size:1.1rem; margin-top:6px;"></div>
+        </div>
+
+        <div class="card">
+            <h2>📊 Réponses</h2>
+            <div id="s-results-bars"></div>
+        </div>
+
+        <div class="card">
+            <h2>🏆 Classement</h2>
+            <ul class="ranking-list" id="s-ranking"></ul>
+        </div>
+    </div>
+
+    <!-- ══ VIEW : Quiz terminé ════════════════════════════════════════════════ -->
+    <div id="view-finished" class="hidden">
+        <div class="card text-center" style="padding:40px;">
+            <div style="font-size:3.5rem;">🏁</div>
+            <h1 style="margin-top:12px; margin-bottom:6px;">Quiz Terminé !</h1>
+            <p class="text-muted">Merci d'avoir participé !</p>
+        </div>
+
+        <div class="card text-center" id="s-my-result-card" style="padding:28px;">
+            <div id="s-final-icon" style="font-size:3rem;"></div>
+            <div id="s-final-pos"  style="font-size:1.3rem; font-weight:700; margin-top:8px;"></div>
+            <div id="s-final-score" style="color:#26de81; font-size:1.1rem; margin-top:4px;"></div>
+        </div>
+
+        <div class="card">
+            <h2>🏆 Classement Final</h2>
+            <ul class="ranking-list" id="s-final-ranking"></ul>
+        </div>
+
+        <a href="/" class="btn btn-primary btn-lg" style="margin-top:4px;">← Retour à l'accueil</a>
+    </div>
+
+</div><!-- /container -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+const socket = io();
+let myName   = '';
+let myCode   = '';
+let myAnswer = -1;   // -1 = pas encore répondu
+
+// ── Utilities ──────────────────────────────────────────────────────────────
+function showView(name) {
+    ['join','wait','question','answered','results','finished'].forEach(v => {
+        document.getElementById('view-' + v).classList.add('hidden');
+    });
+    document.getElementById('view-' + name).classList.remove('hidden');
+}
+
+function escHtml(str) {
+    return String(str)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function renderRanking(elId, ranking) {
+    const ul     = document.getElementById(elId);
+    const medals = ['🥇','🥈','🥉'];
+    ul.innerHTML = ranking.map(([name, score], i) => {
+        const isMe = name === myName;
+        return `
+        <li class="ranking-item${isMe ? ' me' : ''}">
+            <span class="rank-pos ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${medals[i] ?? (i+1)}</span>
+            <span class="rank-name">
+                ${escHtml(name)}
+                ${isMe ? '<span style="color:#f9ca24;font-size:0.8rem;"> (vous)</span>' : ''}
+            </span>
+            <span class="rank-score">${score} pt${score !== 1 ? 's' : ''}</span>
+        </li>`;
+    }).join('');
+}
+
+// ── Join ────────────────────────────────────────────────────────────────────
+function joinSession() {
+    const code = document.getElementById('code-input').value.trim().toUpperCase();
+    const name = document.getElementById('name-input').value.trim();
+    const err  = document.getElementById('join-error');
+    err.textContent = '';
+    if (code.length < 4) { err.textContent = 'Entrez un code de session valide.'; return; }
+    if (!name)           { err.textContent = 'Entrez votre prénom / pseudo.';     return; }
+    myCode = code;
+    myName = name;
+    socket.emit('join_student', { code, name });
+}
+
+// ── Socket events ────────────────────────────────────────────────────────────
+socket.on('joined', () => {
+    document.getElementById('wait-greeting').textContent = `Bonjour, ${escHtml(myName)} !`;
+    document.getElementById('wait-code').textContent     = myCode;
+    showView('wait');
+});
+
+socket.on('error', (data) => {
+    document.getElementById('join-error').textContent = data.message;
+});
+
+socket.on('new_question', (data) => {
+    myAnswer = -1;
+    document.getElementById('s-q-progress').textContent =
+        `Question ${data.index + 1} / ${data.total}`;
+    document.getElementById('student-question-text').textContent = data.question;
+    document.getElementById('s-cours').textContent = data.cours || '—';
+    document.getElementById('s-sujet').textContent = data.sujet || '—';
+
+    // Reset chrono bar
+    const bar = document.getElementById('student-chrono-bar');
+    const el  = document.getElementById('student-chrono');
+    bar.style.width = '100%';
+    bar.classList.remove('urgent');
+    el.classList.remove('urgent');
+
+    // Build answer buttons
+    const colors  = ['a1','a2','a3','a4'];
+    const symbols = ['▲','◆','●','★'];
+    const grid    = document.getElementById('student-answers-grid');
+    grid.innerHTML = data.reponses.map((r, i) => `
+        <button class="answer-btn ${colors[i]}" id="ans-btn-${i}" onclick="submitAnswer(${i})">
+            <span style="font-size:1.3rem; margin-right:8px;">${symbols[i]}</span>${escHtml(r)}
+        </button>`
+    ).join('');
+
+    showView('question');
+});
+
+socket.on('chrono_tick', (data) => {
+    const el  = document.getElementById('student-chrono');
+    const bar = document.getElementById('student-chrono-bar');
+    if (!el || !bar) return;
+    el.textContent  = data.remaining;
+    const pct = Math.max(0, (data.remaining / data.total) * 100);
+    bar.style.width = pct + '%';
+    const urgent = data.remaining <= 5;
+    el.classList.toggle('urgent', urgent);
+    bar.classList.toggle('urgent', urgent);
+});
+
+// ── Submit answer ────────────────────────────────────────────────────────────
+function submitAnswer(index) {
+    if (myAnswer !== -1) return;   // already answered
+    myAnswer = index;
+    socket.emit('submit_answer', { code: myCode, name: myName, answer: index });
+    // Disable all buttons visually
+    for (let i = 0; i < 4; i++) {
+        const btn = document.getElementById('ans-btn-' + i);
+        if (btn) btn.disabled = true;
+    }
+    document.getElementById('answered-icon').textContent = '✅';
+    document.getElementById('answered-msg').textContent  = 'Réponse envoyée !';
+    showView('answered');
+}
+
+// ── Show results ─────────────────────────────────────────────────────────────
+socket.on('show_results', (data) => {
+    showView('results');
+
+    const isCorrect = myAnswer !== -1 && myAnswer === data.correct;
+    const noAnswer  = myAnswer === -1;
+    const card      = document.getElementById('result-card');
+
+    card.className = 'card text-center ';
+    if (noAnswer)      { card.classList.add('result-card-noans');   document.getElementById('result-icon').textContent = '⏰'; document.getElementById('result-msg').textContent = 'Temps écoulé — pas de réponse'; }
+    else if (isCorrect){ card.classList.add('result-card-correct'); document.getElementById('result-icon').textContent = '🎉'; document.getElementById('result-msg').textContent = 'Bonne réponse !'; }
+    else               { card.classList.add('result-card-wrong');   document.getElementById('result-icon').textContent = '❌'; document.getElementById('result-msg').textContent = 'Mauvaise réponse'; }
+
+    const myEntry = data.ranking.find(([n]) => n === myName);
+    document.getElementById('result-score').textContent =
+        myEntry ? `Score : ${myEntry[1]} point${myEntry[1] !== 1 ? 's' : ''}` : '';
+
+    // Bars
+    const total   = data.total_students || 1;
+    const colors  = ['a1','a2','a3','a4'];
+    const symbols = ['▲','◆','●','★'];
+    document.getElementById('s-results-bars').innerHTML = data.reponses.map((resp, i) => {
+        const count = data.stats[i];
+        const pct   = Math.round((count / total) * 100);
+        const ok    = i === data.correct;
+        return `
+        <div class="answer-stat-bar">
+            <span class="answer-stat-label">${symbols[i]}</span>
+            <div class="bar-track">
+                <div class="bar-fill ${colors[i]} ${ok ? 'correct-bar' : ''}"
+                     style="width:${Math.max(pct, 3)}%">
+                    ${count > 0 ? count : ''}
+                </div>
+            </div>
+            <span class="bar-answer-label" style="${ok ? 'color:#26de81;font-weight:700;' : 'color:#aaa;'}">
+                ${escHtml(resp)} ${ok ? '✓' : ''}
+            </span>
+        </div>`;
+    }).join('');
+
+    renderRanking('s-ranking', data.ranking);
+});
+
+// ── Quiz finished ────────────────────────────────────────────────────────────
+socket.on('quiz_finished', (data) => {
+    showView('finished');
+
+    const medals = ['🥇','🥈','🥉'];
+    const pos    = data.ranking.findIndex(([n]) => n === myName);
+    const entry  = data.ranking.find(([n]) => n === myName);
+
+    if (pos !== -1 && entry) {
+        document.getElementById('s-final-icon').textContent  = medals[pos] ?? '🎓';
+        document.getElementById('s-final-pos').textContent   =
+            `${pos + 1}${pos === 0 ? 'ère' : 'ème'} place sur ${data.ranking.length}`;
+        document.getElementById('s-final-score').textContent =
+            `${entry[1]} point${entry[1] !== 1 ? 's' : ''}`;
+    }
+
+    renderRanking('s-final-ranking', data.ranking);
+});
+</script>
+</body>
+<script>
+document.getElementById('toggle-theme').onclick = function() {
+    document.body.classList.toggle('light-mode');
+    localStorage.setItem('theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
+};
+if(localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
+</script>
+</body>
+</html>

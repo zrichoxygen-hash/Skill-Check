@@ -1,0 +1,7 @@
+# Vercel Python/Flask deployment configuration
+[build]
+  command = "pip install -r requirements.txt"
+  publish = "frontend"
+
+[functions]
+  api/index.py = { runtime = "python3.9" }
